@@ -1,0 +1,16 @@
+{
+  "name": "laoco-n-bronze-and-time",
+  "version": "1.0.0",
+  "description": "A cinematic, scroll-driven WebGL landing page built around a bronze horse sculpture. Single self-contained `index.html` — no build step, no framework, no bundler.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
