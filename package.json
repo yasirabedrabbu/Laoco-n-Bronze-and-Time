@@ -1,32 +1,24 @@
 {
   "name": "laoco-n-bronze-and-time",
   "version": "1.0.0",
-  "description": "A cinematic, scroll-driven WebGL landing page built around a bronze horse sculpture. Single self-contained `index.html` — no build step, no framework, no bundler.",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
+  "private": true,
+  "description": "",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start"
-},
-
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "next": "^16.4.6",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "three": "^0.187.0"
+    "next": "...",
+    "react": "...",
+    "react-dom": "...",
+    "three": "..."
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@types/three": "^0.187.0",
-    "typescript": "^7.0.2"
+    "@types/node": "...",
+    "@types/react": "...",
+    "@types/react-dom": "...",
+    "@types/three": "...",
+    "typescript": "..."
   }
 }
