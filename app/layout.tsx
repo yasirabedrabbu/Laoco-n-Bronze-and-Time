@@ -17,6 +17,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://laocon.vercel.app"),
   title: "Laocoön — Bronze and Time",
   description:
     "A cinematic, scroll-driven WebGL experience built around a bronze horse sculpture.",
@@ -24,8 +25,17 @@ export const metadata: Metadata = {
     title: "Laocoön — Bronze and Time",
     description:
       "A cinematic, scroll-driven WebGL experience built around a bronze horse sculpture.",
-    images: ["/images/1.png"],
+    url: "/",
+    siteName: "Laocoön",
+    images: [{ url: "/images/1.png", width: 1200, height: 1200, alt: "Laocoön — Bronze and Time" }],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Laocoön — Bronze and Time",
+    description:
+      "A cinematic, scroll-driven WebGL experience built around a bronze horse sculpture.",
+    images: ["/images/1.png"],
   },
 };
 
