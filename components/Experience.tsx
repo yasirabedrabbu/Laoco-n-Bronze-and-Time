@@ -69,9 +69,9 @@ export default function Experience() {
         setProgress(1);
         setReady(true);
       },
-      onError: (e) => {
-        console.error("Failed to load bronze horse model:", e);
-        setFailed(true);
+      onError: (message) => {
+       console.error("[Experience] Model error:", message);
+       setFailed(true);
       },
       onFrame: ({ scroll, dt }) => {
         // outer cursor ring follows with lag

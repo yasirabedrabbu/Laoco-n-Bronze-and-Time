@@ -1,10 +1,11 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { BG_VERTEX, BG_FRAGMENT } from "./shaders";
 
 const SPARK_COUNT = 450;
 
-/** Frame-rate independent smoothing factor (replaces fixed per-frame lerp). */
+/** Frame-rate independent smoothing factor. */
 export const damp = (rate: number, dt: number) => 1 - Math.exp(-rate * dt);
 
 export interface FrameState {
@@ -18,7 +19,7 @@ export interface SceneOptions {
   reducedMotion: boolean;
   onProgress?: (p: number) => void;
   onLoaded?: () => void;
-  onError?: (e: unknown) => void;
+  onError?: (message: string) => void;
   onFrame?: (s: FrameState) => void;
 }
 
@@ -38,12 +39,10 @@ interface SparkData {
 
 function disposeObject(root: THREE.Object3D) {
   root.traverse((obj) => {
-    const isMesh = (obj as THREE.Mesh).isMesh;
-    const isPoints = (obj as THREE.Points).isPoints;
-    if (!isMesh && !isPoints) return;
-    const m = obj as THREE.Mesh;
-    m.geometry?.dispose();
-    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh && !(obj as THREE.Points).isPoints) return;
+    mesh.geometry?.dispose();
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     mats.forEach((mat) => {
       if (!mat) return;
       Object.values(mat as unknown as Record<string, unknown>).forEach((v) => {
@@ -193,53 +192,66 @@ export function createScene(opts: SceneOptions): SceneHandle {
   let mixer: THREE.AnimationMixer | null = null;
   const maxAniso = Math.min(16, renderer.capabilities.getMaxAnisotropy());
 
-  new GLTFLoader().load(
+  const loader = new GLTFLoader();
+  // Supports GLBs compressed with gltf-transform --compress meshopt.
+  // Harmless for uncompressed files.
+  loader.setMeshoptDecoder(MeshoptDecoder);
+
+  loader.load(
     modelUrl,
     (gltf) => {
       if (disposed) return;
-      const model = gltf.scene;
-      const pivot = new THREE.Group();
-      pivot.add(model);
-      scene.add(pivot);
+      try {
+        const model = gltf.scene;
+        const pivot = new THREE.Group();
+        pivot.add(model);
+        scene.add(pivot);
 
-      model.traverse((child) => {
-        const mesh = child as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        mats.forEach((m) => {
-          const std = m as THREE.MeshStandardMaterial;
-          std.roughness = 0.42;
-          std.metalness = 0.92;
-          std.flatShading = false;
-          if (std.map) std.map.anisotropy = maxAniso;
-          std.needsUpdate = true;
+        model.traverse((child) => {
+          const mesh = child as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach((m) => {
+            const std = m as THREE.MeshStandardMaterial;
+            std.roughness = 0.42;
+            std.metalness = 0.92;
+            std.flatShading = false;
+            if (std.map) std.map.anisotropy = maxAniso;
+            std.needsUpdate = true;
+          });
         });
-      });
 
-      if (gltf.animations.length > 0) {
-        mixer = new THREE.AnimationMixer(model);
-        gltf.animations.forEach((clip) => mixer!.clipAction(clip).play());
+        if (gltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) => mixer!.clipAction(clip).play());
+        }
+
+        // auto-scale to max dimension 3.5, then recenter
+        const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(3.5 / (maxDim > 0.0001 ? maxDim : 1));
+        model.updateMatrixWorld(true);
+        const center = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
+        model.position.sub(center);
+
+        pivot.position.y = -0.4;
+        modelPivot = pivot;
+        opts.onLoaded?.();
+      } catch (err) {
+        console.error("[scene] Model setup failed:", err);
+        opts.onError?.("Model setup failed. Check the console for details.");
       }
-
-      // auto-scale to max dimension 3.5, then recenter
-      const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      model.scale.setScalar(3.5 / (maxDim > 0.0001 ? maxDim : 1));
-      model.updateMatrixWorld(true);
-      const center = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
-      model.position.sub(center);
-
-      pivot.position.y = -0.4;
-      modelPivot = pivot;
-      opts.onLoaded?.();
     },
     (e) => {
       if (e.lengthComputable && e.total > 0) opts.onProgress?.(e.loaded / e.total);
     },
     (err) => {
-      if (!disposed) opts.onError?.(err);
+      if (disposed) return;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[scene] Failed to load ${modelUrl}:`, err);
+      opts.onError?.(`Could not load ${modelUrl}: ${msg}`);
     }
   );
 
